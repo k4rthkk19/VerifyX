@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VerifyX — Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg:       #060810;
+      --surface:  #0d1020;
+      --surface2: #131828;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #e8eaf0;
+      --muted:    #6b7390;
+      --accent:   #4f8eff;
+      --fake:     #ff4d6a;
+      --real:     #2ecc8f;
+      --radius:   14px;
+      --t:        0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Login overlay */
+    #loginOverlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      width: 360px;
+      text-align: center;
+    }
+    .login-box h1 { font-family:'Syne',sans-serif; font-size:28px; font-weight:800; margin-bottom:8px; }
+    .login-box p  { font-size:13px; color:var(--muted); margin-bottom:28px; }
+    .login-input {
+      width:100%; padding:12px 16px;
+      background:var(--surface2); border:1px solid var(--border); border-radius:10px;
+      color:var(--text); font-size:14px; outline:none; margin-bottom:12px;
+      transition:var(--t);
+    }
+    .login-input:focus { border-color:var(--accent); }
+    .login-btn {
+      width:100%; height:46px;
+      background:linear-gradient(135deg,var(--accent),#6366f1);
+      border:none; border-radius:10px;
+      color:#fff; font-family:'Syne',sans-serif; font-size:14px; font-weight:700;
+      cursor:pointer; transition:var(--t);
+    }
+    .login-btn:hover { opacity:0.9; transform:translateY(-1px); }
+    .login-error { color:var(--fake); font-size:12px; margin-top:8px; display:none; }
+
+    /* Dashboard layout */
+    #dashboard { display:none; }
+
+    .dash-header {
+      background:var(--surface);
+      border-bottom:1px solid var(--border);
+      padding:16px 32px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .dash-logo { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; }
+    .dash-logo span { color:var(--accent); }
+    .dash-nav { display:flex; align-items:center; gap:12px; }
+    .dash-badge {
+      padding:5px 12px; border-radius:100px;
+      border:1px solid var(--border);
+      font-family:'JetBrains Mono',monospace; font-size:11px;
+      color:var(--real);
+    }
+    .logout-btn {
+      padding:8px 16px; border-radius:8px;
+      border:1px solid var(--border); background:transparent;
+      color:var(--muted); font-size:13px; cursor:pointer; transition:var(--t);
+    }
+    .logout-btn:hover { border-color:var(--fake); color:var(--fake); }
+
+    .dash-body { max-width:1100px; margin:0 auto; padding:32px 24px; }
+
+    /* Stat cards */
+    .stats-grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+      gap:16px; margin-bottom:28px;
+    }
+    .stat-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:20px;
+      transition:var(--t);
+    }
+    .stat-card:hover { border-color:rgba(79,142,255,0.3); transform:translateY(-2px); }
+    .stat-label {
+      font-size:11px; font-weight:600; text-transform:uppercase;
+      letter-spacing:0.08em; color:var(--muted); margin-bottom:8px;
+    }
+    .stat-value {
+      font-family:'Syne',sans-serif; font-size:32px; font-weight:800;
+    }
+    .stat-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+
+    /* Charts row */
+    .charts-row {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:16px; margin-bottom:28px;
+    }
+    @media (max-width:700px) { .charts-row { grid-template-columns:1fr; } }
+
+    .chart-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:20px;
+    }
+    .chart-title {
+      font-family:'Syne',sans-serif; font-size:14px; font-weight:700;
+      margin-bottom:16px;
+    }
+    .chart-box { height:200px; position:relative; }
+
+    /* Logs table */
+    .table-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden;
+    }
+    .table-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px;
+      border-bottom:1px solid var(--border);
+    }
+    .table-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; }
+    .refresh-btn {
+      padding:7px 14px; border-radius:8px;
+      border:1px solid var(--border); background:transparent;
+      color:var(--muted); font-size:12px; cursor:pointer; transition:var(--t);
+    }
+    .refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th {
+      padding:10px 16px; text-align:left;
+      font-size:11px; font-weight:600; text-transform:uppercase;
+      letter-spacing:0.06em; color:var(--muted);
+      border-bottom:1px solid var(--border);
+      background:var(--surface2);
+    }
+    td {
+      padding:12px 16px;
+      border-bottom:1px solid rgba(255,255,255,0.03);
+      vertical-align:middle;
+    }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,0.02); }
+
+    .pred-badge {
+      display:inline-block;
+      padding:3px 10px; border-radius:100px;
+      font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500;
+      border:1px solid;
+    }
+    .pred-fake { border-color:var(--fake); color:var(--fake); background:rgba(255,77,106,0.08); }
+    .pred-real { border-color:var(--real); color:var(--real); background:rgba(46,204,143,0.08); }
+
+    .conf-mini {
+      display:flex; align-items:center; gap:8px;
+      font-family:'JetBrains Mono',monospace; font-size:12px;
+    }
+    .conf-track {
+      width:60px; height:4px; background:var(--surface2); border-radius:100px; overflow:hidden;
+    }
+    .conf-fill { height:100%; border-radius:100px; }
+
+    .text-truncate {
+      max-width:200px; overflow:hidden;
+      text-overflow:ellipsis; white-space:nowrap;
+      color:var(--muted); font-size:12px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 20px; border-top:1px solid var(--border);
+    }
+    .page-info { font-size:12px; color:var(--muted); }
+    .page-btns { display:flex; gap:6px; }
+    .page-btn {
+      padding:6px 12px; border-radius:6px;
+      border:1px solid var(--border); background:transparent;
+      color:var(--muted); font-size:12px; cursor:pointer; transition:var(--t);
+    }
+    .page-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+    .page-btn:disabled { opacity:0.4; cursor:default; }
+
+    .loading-row td { text-align:center; padding:32px; color:var(--muted); }
+  </style>
+</head>
+
+<body>
+  <!-- Login overlay -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <div style="font-size:40px;margin-bottom:16px;">🛡️</div>
+      <h1>Admin Panel</h1>
+      <p>VerifyX · Secure Dashboard Access</p>
+      <input type="password" class="login-input" id="pwdInput" placeholder="Enter admin password"
+             onkeydown="if(event.key==='Enter') doLogin()">
+      <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
+      <div class="login-error" id="loginError">Incorrect password. Try again.</div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <header class="dash-header">
+      <div class="dash-logo">Verify<span>X</span> <span style="color:var(--muted);font-size:14px;font-weight:400;">/ Admin</span></div>
+      <div class="dash-nav">
+        <div class="dash-badge">● LIVE</div>
+        <a href="/" style="text-decoration:none;">
+          <button class="logout-btn">← Back to App</button>
+        </a>
+        <button class="logout-btn" onclick="doLogout()">Logout</button>
+      </div>
+    </header>
+
+    <main class="dash-body">
+
+      <!-- Stats -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-label">Total Queries</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub">All time</div></div>
+        <div class="stat-card"><div class="stat-label">Fake Detected</div><div class="stat-value" style="color:var(--fake)" id="sFake">—</div><div class="stat-sub">FAKE classifications</div></div>
+        <div class="stat-card"><div class="stat-label">Real Detected</div><div class="stat-value" style="color:var(--real)" id="sReal">—</div><div class="stat-sub">REAL classifications</div></div>
+        <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value" style="color:var(--accent)" id="sToday">—</div><div class="stat-sub">Queries today</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Confidence</div><div class="stat-value" id="sConf">—</div><div class="stat-sub">% average</div></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Fake vs Real Distribution</div>
+          <div class="chart-box"><canvas id="pieChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Daily Query Trend (7 days)</div>
+          <div class="chart-box"><canvas id="barChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Logs table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📋 Query Logs</div>
+          <button class="refresh-btn" onclick="loadLogs()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>IP</th>
+                <th>Type</th>
+                <th>Input</th>
+                <th>Prediction</th>
+                <th>Confidence</th>
+                <th>Model</th>
+              </tr>
+            </thead>
+            <tbody id="logsTbody">
+              <tr class="loading-row"><td colspan="8">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <div class="page-info" id="pageInfo">—</div>
+          <div class="page-btns">
+            <button class="page-btn" id="btnPrev" onclick="changePage(-1)">← Prev</button>
+            <button class="page-btn" id="btnNext" onclick="changePage(1)">Next →</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    /* ── Auth ────────────────────────────────────────────────────────── */
+    let adminToken = sessionStorage.getItem('adminToken') || '';
+    let currentPage = 1;
+    const PER_PAGE  = 20;
+    let pieChartInst = null, barChartInst = null;
+
+    async function doLogin() {
+      const pwd = document.getElementById('pwdInput').value;
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        adminToken = d.token;
+        sessionStorage.setItem('adminToken', adminToken);
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('dashboard').style.display     = 'block';
+        initDashboard();
+      } else {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    function doLogout() {
+      adminToken = '';
+      sessionStorage.removeItem('adminToken');
+      location.reload();
+    }
+
+    function authHeaders() {
+      return { 'X-Admin-Token': adminToken };
+    }
+
+    /* ── Init ────────────────────────────────────────────────────────── */
+    function initDashboard() {
+      loadStats();
+      loadLogs();
+    }
+
+    if (adminToken) {
+      // Already logged in this session
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('dashboard').style.display    = 'block';
+      initDashboard();
+    }
+
+    /* ── Stats + Charts ────────────────────────────────────────────── */
+    async function loadStats() {
+      const res  = await fetch('/api/admin/stats', { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('sTotal').textContent = data.total;
+      document.getElementById('sFake').textContent  = data.fake;
+      document.getElementById('sReal').textContent  = data.real;
+      document.getElementById('sToday').textContent = data.today;
+      document.getElementById('sConf').textContent  = data.avg_conf + '%';
+
+      buildPie(data.fake, data.real);
+      buildBar(data.daily_trend);
+    }
+
+    function buildPie(fake, real) {
+      if (pieChartInst) pieChartInst.destroy();
+      const ctx = document.getElementById('pieChart');
+      pieChartInst = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['FAKE', 'REAL'],
+          datasets: [{
+            data: [fake, real],
+            backgroundColor: ['rgba(255,77,106,0.85)', 'rgba(46,204,143,0.85)'],
+            borderColor: ['#ff4d6a', '#2ecc8f'],
+            borderWidth: 2, hoverOffset: 10,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '60%',
+          plugins: {
+            legend: { position:'right', labels:{ color:'#6b7390', font:{ family:'JetBrains Mono', size:12 }, padding:16 } }
+          }
+        }
+      });
+    }
+
+    function buildBar(trend) {
+      if (barChartInst) barChartInst.destroy();
+      const sorted = [...(trend||[])].reverse();
+      const ctx = document.getElementById('barChart');
+      barChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: sorted.map(r => r.day),
+          datasets: [{
+            label: 'Queries',
+            data: sorted.map(r => r.cnt),
+            backgroundColor: 'rgba(79,142,255,0.6)',
+            borderColor: '#4f8eff',
+            borderWidth: 1, borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { ticks:{ color:'#6b7390', font:{size:11} }, grid:{ color:'rgba(255,255,255,0.03)' } },
+            y: { ticks:{ color:'#6b7390', font:{size:11} }, grid:{ color:'rgba(255,255,255,0.03)' }, beginAtZero:true },
+          },
+          plugins: { legend:{ display:false } }
+        }
+      });
+    }
+
+    /* ── Logs Table ─────────────────────────────────────────────────── */
+    async function loadLogs() {
+      document.getElementById('logsTbody').innerHTML =
+        '<tr class="loading-row"><td colspan="8">Loading…</td></tr>';
+      const res  = await fetch(`/api/admin/logs?page=${currentPage}&per_page=${PER_PAGE}`, { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const tbody = document.getElementById('logsTbody');
+      tbody.innerHTML = '';
+
+      if (!data.logs.length) {
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="8" style="color:var(--muted)">No queries yet.</td></tr>';
+        return;
+      }
+
+      data.logs.forEach(row => {
+        const isFake = row.prediction === 'FAKE';
+        const conf   = (row.confidence || 0).toFixed(1);
+        const fillColor = isFake ? '#ff4d6a' : '#2ecc8f';
+        const date   = new Date(row.created_at).toLocaleString();
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;">#${row.id}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">${date}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);">${escHtml(row.ip_address)}</td>
+            <td><span style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);color:var(--muted);">${row.input_type}</span></td>
+            <td><div class="text-truncate" title="${escHtml(row.input_text)}">${escHtml(row.input_text)}</div></td>
+            <td><span class="pred-badge ${isFake ? 'pred-fake' : 'pred-real'}">${row.prediction}</span></td>
+            <td>
+              <div class="conf-mini">
+                <div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${fillColor}"></div></div>
+                ${conf}%
+              </div>
+            </td>
+            <td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(row.model_used||'')}</td>
+          </tr>
+        `);
+      });
+
+      const total = data.total;
+      const pages = Math.ceil(total / PER_PAGE);
+      document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${pages} · ${total} total`;
+      document.getElementById('btnPrev').disabled = currentPage <= 1;
+      document.getElementById('btnNext').disabled = currentPage >= pages;
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      loadLogs();
+    }
+
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.appendChild(document.createTextNode(str||''));
+      return d.innerHTML;
+    }
+
+    // Auto-refresh stats every 30s
+    setInterval(() => { if (adminToken) loadStats(); }, 30000);
+  </script>
+</body>
+</html>
