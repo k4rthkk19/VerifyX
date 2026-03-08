@@ -28,6 +28,3 @@ lxml>=5.0.0                   # fast HTML parser for BS4
 
 # --- Production server ---
 gunicorn>=21.2.0              # WSGI server for deployment
-
-# --- Dev / testing ---
-pytest>=8.0.0
