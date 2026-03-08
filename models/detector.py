@@ -18,7 +18,7 @@ Both paths expose the same interface:
     #    "explanation": "...",
     #    "model_used": "..."}
 """
-
+import torch
 import re
 import logging
 import os
@@ -119,8 +119,9 @@ class DistilBERTClassifier:
     def predict(self, text: str) -> dict:
         # Truncate to avoid OOM on very long texts
         truncated = text[:512]
-        out = self.pipe(truncated, candidate_labels=self.labels)
-        # out["labels"][0] is the top label, out["scores"][0] is its confidence
+
+        with torch.no_grad():
+            out = self.pipe(truncated, candidate_labels=self.labels)
         top_label = out["labels"][0]
         top_score = out["scores"][0]
 

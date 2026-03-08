@@ -194,7 +194,7 @@ def predict():
     # ── Validation ──────────────────────────────────────────────────────────
     if not raw_input:
         return jsonify({"error": "Input text cannot be empty."}), 400
-    if len(raw_input) > 10_000:
+    if len(raw_input) > 2000:
         return jsonify({"error": "Input exceeds maximum length (10 000 chars)."}), 400
     if input_type == "url" and not is_valid_url(raw_input):
         return jsonify({"error": "Invalid URL format."}), 400
