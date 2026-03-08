@@ -24,9 +24,18 @@ from flask import (
 from flask_cors import CORS
 
 # ─── App Initialization ──────────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
+
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32))
+
+# Enable CORS
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
