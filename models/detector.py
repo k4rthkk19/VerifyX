@@ -113,12 +113,14 @@ class DistilBERTClassifier:
             model="typeform/distilbert-base-uncased-mnli",
             device=-1,          # CPU; change to 0 for GPU
         )
+        self.pipe("test", candidate_labels=["real news", "fake news"])
+
         self.labels = ["real news", "fake news"]
         logger.info("DistilBERT pipeline loaded.")
 
     def predict(self, text: str) -> dict:
         # Truncate to avoid OOM on very long texts
-        truncated = text[:512]
+        truncated = text[:300]
 
         with torch.no_grad():
             out = self.pipe(truncated, candidate_labels=self.labels)
@@ -128,7 +130,7 @@ class DistilBERTClassifier:
         prediction = "FAKE" if "fake" in top_label else "REAL"
         confidence = round(top_score * 100, 2)
 
-        features = analyse_linguistic_features(text)
+        features = analyse_linguistic_features(truncated)
         explanation = self._build_explanation(prediction, confidence, features)
 
         return {
